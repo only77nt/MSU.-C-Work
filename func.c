@@ -21,3 +21,23 @@ int str(char *str1, char *str2) /*Функция strcmp*/
 	}
 return 0;
 }
+
+void clean_stdin(void) /*Функция очистки stdin*/
+{
+int c;
+do c = getchar();	
+while (c != '\n' && c != EOF);
+return;
+}
+
+int NameCheck(char *str) /*Функция, определяющая не пустую строку*/
+{
+	int i=0;
+	while(str[i]!='\0')
+	{
+		if(str[i]!=' ' && str[i]!='\0' && str[i]!='\n')
+			return 1;
+		i++;
+	}
+return 0;
+}

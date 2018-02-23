@@ -6,3 +6,5 @@ struct sockaddr_in client_address;
 struct sockaddr_in address;
 
 int str(char *, char *);
+void clean_stdin(void);
+int NameCheck(char *);
