@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
 {
 	int len,buflen,meslen;
 	struct sockaddr_in address;
-	int result;
+	int result,f;
 	char buffer[BUFFER_SIZE];
 	char Name[BUFFER_SIZE];
 	char NameCpy[BUFFER_SIZE];
@@ -41,6 +41,15 @@ int main(int argc, char *argv[])
 	signal(SIGTSTP,handler);
 
 	memset(&buffer, 0, BUFFER_SIZE); /*Чистим буффер*/	
+
+	for(f=0;f<4;f++)
+	{
+		if(argv[1][f]<'0' || argv[1][f]>'9' || argv[1]==NULL || argv[1][4]!='\0')
+		{
+			printf("Wrong port! Example: 7790\n");
+			exit(2);
+		}
+	}
 
 	sockfd = socket(AF_INET, SOCK_STREAM, 0); /*Создаём сокет клиента*/
 
@@ -109,7 +118,7 @@ while(1)
 				meslen=BUFFER_SIZE-strlen(Name);
 				if(buflen>BUFFER_SIZE)
 				{
-					printf("Very long message! Your message can have %d characters \n", meslen); /*Запоминаем имя клиента*/
+					printf("Very long message! Your message can have %d characters \n", meslen-1); /*Запоминаем имя клиента*/
 					memset(&buffer, 0, BUFFER_SIZE); /*Чистим буффер*/
 					clean_stdin();
 					continue;
@@ -132,7 +141,7 @@ while(1)
 					printf("### 1) To leave a chat write: /exit ###\n");
 					printf("### 2) To change your nickname write: /nick ###\n");
 					printf("### 3) To clear screen write: /clear ###\n");
-					printf("### 4) If you want to know the history of server, write: /users ###\n");
+					printf("### 4) If you want to know who is online, write: /users ###\n");
 					continue;
 				}
 

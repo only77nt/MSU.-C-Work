@@ -34,18 +34,27 @@ int main(int argc, char *argv[])
 	int server_len, client_len;
 	struct sockaddr_in server_address;
 	struct sockaddr_in client_address;
-	int result,cl=0,cd=0;
+	int result,cl=4,cd=0,f;
 	fd_set readfds, testfds;
 	char Name[NAME_SIZE];
 	char Namebuf1[NAME_SIZE];
 	char Namebuf2[NAME_SIZE];
 	char Change[BUFFER_SIZE];
 	char Syst[BUFFER_SIZE]; /*Массив "системных" вызовов*/
-	char *Clients[5]; /*Массив имён клиентов*/
+	char *Clients[10]; /*Массив имён клиентов*/
 
 	signal(SIGTERM,handler);
 	signal(SIGINT,handler);
 	signal(SIGTSTP,handler);
+
+	for(f=0;f<4;f++)
+	{
+		if(argv[1][f]<'0' || argv[1][f]>'9' || argv[1]==NULL || argv[1][4]!='\0')
+		{
+			printf("Wrong port! Example: 7790\n");
+			exit(2);
+		}
+	}
 
 	server_sockfd = socket(AF_INET, SOCK_STREAM, 0); /*Создаём "слушающий" сокет*/
 
@@ -60,10 +69,9 @@ int main(int argc, char *argv[])
 
 	bind(server_sockfd, (struct sockaddr *)&server_address, server_len); /*Привязываем этот сокет*/    
 	
-	listen(server_sockfd, 5); /*Ставим его на "прослушку"*/
+	listen(server_sockfd, 7); /*Ставим его на "прослушку"*/
 
 	FD_ZERO(&readfds); /*Очищаем множество сокетов для чтения*/
-	FD_SET(server_sockfd, &readfds); /*Добавляем в него сервер*/
 
     while(1) /*Запускаем бесконечный цикл, в котором будем читать с сокетов-клиентов и отправлять им сообщения*/
 	{
@@ -71,11 +79,13 @@ int main(int argc, char *argv[])
 		int fd,i,j=0; /*i-счётчик, j-флаг состояния*/
 		int nread;
 		
+		FD_SET(server_sockfd, &readfds); /*Добавляем в него сервер*/
+
 		memset(&buffer, 0, BUFFER_SIZE); /*Чистим буффер*/
 
 		testfds = readfds;
 		printf("server waiting\n");
-		
+
 		result = select(FD_SETSIZE, &testfds, (fd_set *)0,(fd_set *)0, (struct timeval *)0); /*Ожидаем активность*/
 		if (result < 1) 
 		{
@@ -96,7 +106,6 @@ int main(int argc, char *argv[])
 					Clients[cl]=(char*)malloc(BUFFER_SIZE * sizeof(char)+1);
 					strcpy(Clients[cl],Namebuf1);
 					cl++;
-					cd=cl;
 					FD_SET(client_sockfd, &readfds);
 					if(j==0) /*Определяем минимальный дискриптор (нужно для отправки сообщений клиентам)*/
 					{
@@ -109,7 +118,7 @@ int main(int argc, char *argv[])
 								if(i!=client_sockfd)
 								{
 									write(i, "### ###", BUFFER_SIZE-1);
-									write(i, Clients[cl-1], BUFFER_SIZE-1);
+									write(i, Clients[client_sockfd], BUFFER_SIZE-1);
 									write(i,"### was conneted to server! ###", BUFFER_SIZE-1);
 								}
 					continue;
@@ -118,15 +127,18 @@ int main(int argc, char *argv[])
 				{
 					ioctl(fd, FIONREAD, &nread); /*Получаем информацию о выводе*/
 					if (nread == 0) /*Если клиент отключается от сервера*/
-					{
-						for(i=4;i<=max_fd;i++)
-								if(i!=client_sockfd)
-								{
-									write(i, "### Client leaved the server! ###", BUFFER_SIZE-1);
+					{	
+						for(i=4;i<=max_fd;i++) /*Отправляем предыдущему -> получаем бесконечный цикл*/
+								if(i!=fd)
+								{	
+									write(i, "###  ###", BUFFER_SIZE-1);
+									write(i, Clients[fd], BUFFER_SIZE-1);
+									write(i, "### Client leaved the server! ###", BUFFER_SIZE-1);									
 								}
 						close(fd);
 						FD_CLR(fd, &readfds); /*Удаляем дескриптор из множества на чтение*/
 						printf("removing client on fd %d\n", fd);
+						Clients[fd][0]='\0';
 						continue;
 					} 
 					else 
@@ -138,8 +150,11 @@ int main(int argc, char *argv[])
 							if(!strcmp(buffer,"/users")) /*Печатаем имена всех пользователей*/
 							{
 								printf("USERS!\n");
-								for(i=0;i<=cd-1;i++)
-									write(fd, Clients[i], BUFFER_SIZE-1);
+								for(i=4;i<=cl-1;i++)
+								{
+									if(Clients[i][0]!='\0')
+										write(fd, Clients[i], BUFFER_SIZE-1);
+								}
 								continue;
 							}							
 							if(!strcmp(buffer,"/nick")) /*Изменяем никнейм, заносим сообщение об изенении в буффер*/
@@ -154,9 +169,10 @@ int main(int argc, char *argv[])
 								strcpy(Change,Namebuf1);
 								strcat(Change,"now is known as ");
 								strcat(Change,Namebuf2);
+								strcpy(Clients[fd],Namebuf2);
 								strcpy(buffer,Change);
 							}
-							sleep(2);
+							//sleep(2);
 							printf("serving client on fd %d\n", fd);
 							for(i=4;i<=max_fd;i++) /*Отправляем сообщения всем*/
 								if(i!=fd)
