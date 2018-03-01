@@ -42,6 +42,12 @@ int main(int argc, char *argv[])
 
 	memset(&buffer, 0, BUFFER_SIZE); /*Чистим буффер*/	
 
+	if(argc<2)
+	{
+		printf("Enter the port! Exaple: 7790\n");
+		exit(0);
+	}
+
 	for(f=0;f<4;f++)
 	{
 		if(argv[1][f]<'0' || argv[1][f]>'9' || argv[1]==NULL || argv[1][4]!='\0')
